@@ -1,12 +1,12 @@
 import streamlit as st
 from playwright.sync_api import sync_playwright
+import subprocess
 import re
 import math
-import subprocess
 
 subprocess.run(["playwright", "install", "chromium"], check=False)
 
-st.set_page_config(page_title="Pricing Tool", page_icon="💸")
+st.set_page_config(page_title="Repair Pricing Tool", page_icon="💸")
 
 st.title("💸 Repair Pricing Tool")
 st.write("Search MobileSentrix parts and calculate your sell price.")
@@ -23,9 +23,8 @@ def calculate_price(p):
 with st.form("search_form"):
     search_term = st.text_input(
         "Enter part search",
-        placeholder="ex: iPhone 15 Pro Max screen"
+        placeholder="ex: iPhone 13 Pro Max battery"
     )
-
     submitted = st.form_submit_button("Search")
 
 if submitted:
@@ -33,6 +32,7 @@ if submitted:
         st.warning("Type a part first.")
     else:
         device_url = f"https://www.mobilesentrix.com/search?q={search_term.replace(' ', '+')}"
+        page_text = ""
 
         with st.spinner("Searching parts..."):
             with sync_playwright() as p:
@@ -40,20 +40,21 @@ if submitted:
                     headless=True,
                     args=[
                         "--no-sandbox",
-                        "--disable-dev-shm-usage",
-                        "--disable-gpu",
-                        "--single-process"
+                        "--disable-dev-shm-usage"
                     ]
                 )
 
                 page = browser.new_page()
-                page.goto(device_url, wait_until="domcontentloaded", timeout=60000)
-                page.wait_for_selector("body", timeout=60000)
-                page.wait_for_timeout(5000)
+                page.set_default_timeout(60000)
 
-                page_text = page.text_content("body", timeout=60000) or ""
-                browser.close()
-
+                try:
+                    page.goto(device_url, wait_until="domcontentloaded", timeout=60000)
+                    page.wait_for_selector("body", timeout=60000)
+                    page_text = page.text_content("body") or ""
+                except Exception as e:
+                    st.error(f"Search failed: {e}")
+                finally:
+                    browser.close()
 
         lines = page_text.splitlines()
         products = []
