@@ -1,8 +1,15 @@
+import streamlit as st
 from playwright.sync_api import sync_playwright
 import re
 import math
 import subprocess
+
 subprocess.run(["playwright", "install", "chromium"], check=False)
+
+st.set_page_config(page_title="Pricing Tool", page_icon="💸")
+
+st.title("💸 Repair Pricing Tool")
+st.write("Search MobileSentrix parts and calculate your sell price.")
 
 def calculate_price(p):
     if 99 <= p <= 199:
@@ -13,37 +20,38 @@ def calculate_price(p):
     price = math.ceil(price / 5) * 5
     return round(price - 0.01, 2)
 
+search_term = st.text_input("Enter part search", placeholder="ex: iPhone 15 Pro Max screen")
 
-with sync_playwright() as p:
-    browser = p.chromium.launch(
-    headless=True,
-    args=[
-        "--no-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--single-process"
-    ]
-)
-
-    while True:
-        search_term = input("\nEnter part search, or q to quit: ")
-
-        if search_term.lower() in ["q", "quit", "exit"]:
-            break
-
+if st.button("Search"):
+    if not search_term.strip():
+        st.warning("Type a part first.")
+    else:
         device_url = f"https://www.mobilesentrix.com/search?q={search_term.replace(' ', '+')}"
-        print("Searching:", device_url)
 
-        page.goto(device_url)
-        page.wait_for_load_state("networkidle")
+        with st.spinner("Searching parts..."):
+            with sync_playwright() as p:
+                browser = p.chromium.launch(
+                    headless=True,
+                    args=[
+                        "--no-sandbox",
+                        "--disable-dev-shm-usage",
+                        "--disable-gpu",
+                        "--single-process"
+                    ]
+                )
 
-        page_text = page.locator("body").inner_text()
+                page = browser.new_page()
+                page.goto(device_url)
+                page.wait_for_load_state("networkidle")
+
+                page_text = page.locator("body").inner_text()
+                browser.close()
+
         lines = page_text.splitlines()
-
         products = []
         search_words = search_term.lower().split()
 
-        for i in range(len(lines)-1):
+        for i in range(len(lines) - 1):
             name = lines[i].strip()
             next_line = lines[i + 1].strip()
 
@@ -55,25 +63,27 @@ with sync_playwright() as p:
 
                     products.append({
                         "name": name,
-                        "price": price_num
+                        "price": price_num,
+                        "sell": calculate_price(price_num)
                     })
 
         if not products:
-            print("No valid products found.")
+            st.error("No valid products found.")
         else:
             products.sort(key=lambda x: x["price"])
-
             best = products[0]
-            sell_price = calculate_price(best["price"])
 
-            print("\n🔥 BEST OPTION 🔥")
-            print("----------------------")
-            print("Part:", best["name"])
-            print("Cost:", f"${best['price']}")
-            print("Sell:", f"${sell_price}")
+            st.success("Best option found!")
 
-        again = input("\nSearch another part? y/n: ")
-        if again.lower() != "y":
-            break
+            st.subheader("🔥 Best Option")
+            st.write(f"**Part:** {best['name']}")
+            st.write(f"**Cost:** ${best['price']:.2f}")
+            st.write(f"**Sell Price:** ${best['sell']:.2f}")
 
-    browser.close()
+            st.subheader("All Matching Products")
+
+            for product in products:
+                with st.container(border=True):
+                    st.write(f"**{product['name']}**")
+                    st.write(f"Cost: ${product['price']:.2f}")
+                    st.write(f"Sell: ${product['sell']:.2f}")
