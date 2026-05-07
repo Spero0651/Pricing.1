@@ -20,9 +20,15 @@ def calculate_price(p):
     price = math.ceil(price / 5) * 5
     return round(price - 0.01, 2)
 
-search_term = st.text_input("Enter part search", placeholder="ex: iPhone 15 Pro Max screen")
+with st.form("search_form"):
+    search_term = st.text_input(
+        "Enter part search",
+        placeholder="ex: iPhone 15 Pro Max screen"
+    )
 
-if st.button("Search"):
+    submitted = st.form_submit_button("Search")
+
+if submitted:
     if not search_term.strip():
         st.warning("Type a part first.")
     else:
@@ -42,8 +48,8 @@ if st.button("Search"):
 
                 page = browser.new_page()
                 page.goto(device_url)
-                page.wait_for_load_state("networkidle")
-
+                page.wait_for_timeout(3000)
+                
                 page_text = page.locator("body").inner_text()
                 browser.close()
 
