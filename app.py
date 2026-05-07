@@ -1,7 +1,8 @@
 from playwright.sync_api import sync_playwright
 import re
 import math
-
+import subprocess
+subprocess.run(["playwright", "install", "chromium"], check=False)
 
 def calculate_price(p):
     if 99 <= p <= 199:
@@ -14,8 +15,15 @@ def calculate_price(p):
 
 
 with sync_playwright() as p:
-    browser = p.chromium.launch(headless=True)
-    page = browser.new_page()
+    browser = p.chromium.launch(
+    headless=True,
+    args=[
+        "--no-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--single-process"
+    ]
+)
 
     while True:
         search_term = input("\nEnter part search, or q to quit: ")
