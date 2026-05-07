@@ -47,11 +47,13 @@ if submitted:
                 )
 
                 page = browser.new_page()
-                page.goto(device_url)
-                page.wait_for_timeout(3000)
-                
-                page_text = page.locator("body").inner_text()
+                page.goto(device_url, wait_until="domcontentloaded", timeout=60000)
+                page.wait_for_selector("body", timeout=60000)
+                page.wait_for_timeout(5000)
+
+                page_text = page.text_content("body", timeout=60000) or ""
                 browser.close()
+
 
         lines = page_text.splitlines()
         products = []
