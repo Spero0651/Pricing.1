@@ -42,9 +42,9 @@ def scrape_mobilesentrix(search_term):
         try:
             page.goto(device_url, wait_until="domcontentloaded", timeout=60000)
 
-st.write(page.content()[:5000])
+            st.write(page.content()[:5000])
 
-page.wait_for_selector("body", timeout=60000)
+            page.wait_for_selector("body", timeout=60000)
             # Try product-card scraping first
             product_links = page.locator("a.product-item-link").all()
 
